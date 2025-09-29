@@ -1,0 +1,192 @@
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { usePantryStore } from '../store/pantryStore';
+import { useRecipeStore, Recipe } from '../store/recipeStore';
+import { useAuthStore } from '../store/authStore';
+import { generateRecipeFromAI } from '../services/aiService';
+import toast from 'react-hot-toast';
+import { ChefHat, Sparkles, Loader, Clock, Users, Flame, Check, X, Bot, BrainCircuit } from 'lucide-react';
+
+const ChefPage = () => {
+  const { user } = useAuthStore();
+  const { items: pantryItems, updateItemQuantity } = usePantryStore();
+  const { addRecipe } = useRecipeStore();
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [generatedRecipe, setGeneratedRecipe] = useState<Recipe | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const toggleItemSelection = (itemId: string) => {
+    setSelectedItems(prev =>
+      prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
+    );
+  };
+
+  const handleGenerateRecipe = async (type: 'regular' | 'surprise') => {
+    if (user?.subscription === 'free' && type === 'regular' && selectedItems.length === 0) {
+      toast.error('Please select at least one item from your pantry.');
+      return;
+    }
+    
+    if (user?.subscription === 'free' && type === 'surprise') {
+      // Add logic for surprise me limit if needed
+    }
+    
+    setIsLoading(true);
+    setGeneratedRecipe(null);
+    
+    const itemsForAI = type === 'surprise' ? pantryItems : pantryItems.filter(item => selectedItems.includes(item.id));
+    const preferences = {}; // Fetch from user profile later
+
+    try {
+      const partialRecipe = await generateRecipeFromAI(itemsForAI, preferences, user?.subscription || 'free', type);
+      const fullRecipe: Recipe = {
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        rating: 4.5,
+        ...partialRecipe,
+      } as Recipe;
+      
+      setGeneratedRecipe(fullRecipe);
+      addRecipe(fullRecipe);
+      toast.success('Your recipe is ready!');
+    } catch (error) {
+      toast.error('AI Chef is busy! Please try again later.');
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleMadeIt = () => {
+    if (!generatedRecipe) return;
+    
+    generatedRecipe.ingredients.forEach(ing => {
+      const pantryItem = pantryItems.find(p => p.name.toLowerCase() === ing.name.toLowerCase());
+      if (pantryItem) {
+        // This is a simplified logic. A more robust solution would handle unit conversions.
+        const newQuantity = pantryItem.quantity - (ing.quantity || 1); // Assuming quantity is present
+        updateItemQuantity(pantryItem.id, newQuantity);
+      }
+    });
+    
+    toast.success('Pantry updated! Enjoy your meal!');
+    setGeneratedRecipe(null);
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <BrainCircuit className="w-16 h-16 text-orange-500 mx-auto mb-4" />
+        <h1 className="text-4xl font-bold text-gray-900">Chef AI</h1>
+        <p className="text-gray-600 mt-2 max-w-2xl mx-auto">
+          Select ingredients from your pantry or let our AI surprise you with a creative dish!
+        </p>
+      </div>
+
+      <div className="bg-white p-6 rounded-2xl shadow-sm">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Select Ingredients from Pantry</h2>
+        <div className="flex flex-wrap gap-2">
+          {pantryItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => toggleItemSelection(item.id)}
+              className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border transition-all duration-200 ${
+                selectedItems.includes(item.id)
+                  ? 'bg-orange-500 border-orange-500 text-white'
+                  : 'bg-white border-gray-300 text-gray-700 hover:border-orange-400'
+              }`}
+            >
+              {selectedItems.includes(item.id) ? <Check className="w-4 h-4" /> : <X className="w-4 h-4 text-gray-400" />}
+              <span>{item.name}</span>
+            </button>
+          ))}
+          {pantryItems.length === 0 && <p className="text-gray-500">Your pantry is empty. Add some items to get started.</p>}
+        </div>
+      </div>
+      
+      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <button
+          onClick={() => handleGenerateRecipe('regular')}
+          disabled={isLoading}
+          className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-xl hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50"
+        >
+          <ChefHat className="w-6 h-6" />
+          <span className="text-lg font-medium">Generate Recipe</span>
+        </button>
+        <button
+          onClick={() => handleGenerateRecipe('surprise')}
+          disabled={isLoading}
+          className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-8 py-4 rounded-xl hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50"
+        >
+          <Sparkles className="w-6 h-6" />
+          <span className="text-lg font-medium">Surprise Me!</span>
+        </button>
+      </div>
+
+      {isLoading && (
+        <div className="text-center py-12">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            className="w-12 h-12 text-orange-500 mx-auto"
+          >
+            <Loader className="w-full h-full" />
+          </motion.div>
+          <p className="mt-4 text-gray-600">AI Chef is thinking...</p>
+        </div>
+      )}
+
+      {generatedRecipe && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-lg overflow-hidden"
+        >
+          <div className="p-6 md:p-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">{generatedRecipe.title}</h2>
+            <p className="text-gray-600 mb-6">{generatedRecipe.description}</p>
+            
+            <div className="flex flex-wrap gap-4 text-sm text-gray-700 mb-6">
+              <div className="flex items-center space-x-2"><Clock className="w-5 h-5 text-orange-500" /><span>{generatedRecipe.cookingTime} mins</span></div>
+              <div className="flex items-center space-x-2"><Users className="w-5 h-5 text-orange-500" /><span>{generatedRecipe.servings} servings</span></div>
+              <div className="flex items-center space-x-2"><Flame className="w-5 h-5 text-orange-500" /><span>{generatedRecipe.difficulty}</span></div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Ingredients</h3>
+                <ul className="space-y-2">
+                  {generatedRecipe.ingredients.map((ing, i) => (
+                    <li key={i} className="flex space-x-2">
+                      <Check className="w-5 h-5 text-green-500 mt-1 flex-shrink-0" />
+                      <span>{ing.quantity} {ing.unit} {ing.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Instructions</h3>
+                <ol className="space-y-3 list-decimal list-inside">
+                  {generatedRecipe.instructions.map((step, i) => <li key={i}>{step}</li>)}
+                </ol>
+              </div>
+            </div>
+          </div>
+          <div className="p-6 bg-gray-50 flex flex-col sm:flex-row gap-4 justify-end">
+            <button className="border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-xl hover:border-orange-500 transition-all duration-200">
+              Chef Voice Guidance
+            </button>
+            <button
+              onClick={handleMadeIt}
+              className="bg-gradient-to-r from-green-500 to-teal-500 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-200"
+            >
+              I Made It! (Update Pantry)
+            </button>
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+};
+
+export default ChefPage;

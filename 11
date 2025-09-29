@@ -1,0 +1,157 @@
+import { create } from 'zustand';
+import { addDays, parseISO, isBefore, formatISO } from 'date-fns';
+
+export interface PantryItem {
+  id: string;
+  name: string;
+  category: string;
+  quantity: number;
+  unit: string;
+  expiryDate: string;
+  addedDate: string;
+  barcode?: string;
+  brand?: string;
+  image?: string;
+  isExpiring: boolean;
+  isExpired: boolean;
+}
+
+interface PantryState {
+  items: PantryItem[];
+  categories: string[];
+  addItem: (item: Omit<PantryItem, 'id' | 'addedDate' | 'isExpiring' | 'isExpired' | 'image'>) => void;
+  removeItem: (id: string) => void;
+  updateItem: (id: string, updates: Partial<PantryItem>) => void;
+  getExpiringItems: () => PantryItem[];
+  getExpiredItems: () => PantryItem[];
+  updateItemQuantity: (id: string, newQuantity: number) => void;
+  checkExpiryStatus: () => void;
+}
+
+const today = new Date();
+const initialItems: PantryItem[] = [
+  {
+    id: '1',
+    name: 'Fresh Apples',
+    category: 'Fruits',
+    quantity: 5,
+    unit: 'pcs',
+    expiryDate: formatISO(addDays(today, 5)),
+    addedDate: formatISO(today),
+    image: 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?ixlib=rb-4.0.3&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=400&fit=max',
+    isExpiring: false,
+    isExpired: false,
+  },
+  {
+    id: '2',
+    name: 'Whole Milk',
+    category: 'Dairy',
+    quantity: 1,
+    unit: 'liter',
+    expiryDate: formatISO(addDays(today, 2)),
+    addedDate: formatISO(today),
+    image: 'https://images.unsplash.com/photo-1620189507195-68309c04c4d5?ixlib=rb-4.0.3&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=400&fit=max',
+    isExpiring: true,
+    isExpired: false,
+  },
+  {
+    id: '3',
+    name: 'Sourdough Bread',
+    category: 'Grains',
+    quantity: 1,
+    unit: 'loaf',
+    expiryDate: formatISO(addDays(today, -1)),
+    addedDate: formatISO(addDays(today, -3)),
+    image: 'https://images.unsplash.com/photo-1533087353925-b404a424268a?ixlib=rb-4.0.3&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=400&fit=max',
+    isExpiring: false,
+    isExpired: true,
+  },
+    {
+    id: '4',
+    name: 'Chicken Breast',
+    category: 'Meat',
+    quantity: 500,
+    unit: 'g',
+    expiryDate: formatISO(addDays(today, 3)),
+    addedDate: formatISO(today),
+    image: 'https://images.unsplash.com/photo-1604503468825-a74a95f8df75?ixlib=rb-4.0.3&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=400&fit=max',
+    isExpiring: false,
+    isExpired: false,
+  },
+];
+
+
+export const usePantryStore = create<PantryState>((set, get) => ({
+  items: initialItems,
+  categories: ['Vegetables', 'Fruits', 'Dairy', 'Meat', 'Grains', 'Spices', 'Condiments', 'Beverages', 'Snacks', 'Others'],
+  
+  addItem: (item) => {
+    const newItem: PantryItem = {
+      ...item,
+      id: Date.now().toString(),
+      addedDate: new Date().toISOString(),
+      image: `https://source.unsplash.com/400x400/?${item.name}`,
+      isExpiring: false,
+      isExpired: false,
+    };
+    
+    set((state) => ({
+      items: [...state.items, newItem]
+    }));
+    
+    get().checkExpiryStatus();
+  },
+  
+  removeItem: (id) => {
+    set((state) => ({
+      items: state.items.filter(item => item.id !== id)
+    }));
+  },
+  
+  updateItem: (id, updates) => {
+    set((state) => ({
+      items: state.items.map(item => 
+        item.id === id ? { ...item, ...updates } : item
+      )
+    }));
+    
+    get().checkExpiryStatus();
+  },
+  
+  updateItemQuantity: (id, newQuantity) => {
+    set((state) => ({
+      items: state.items.map(item =>
+        item.id === id ? { ...item, quantity: Math.max(0, newQuantity) } : item
+      ).filter(item => item.quantity > 0) // Optionally remove item if quantity is 0
+    }));
+  },
+  
+  getExpiringItems: () => {
+    get().checkExpiryStatus();
+    return get().items.filter(item => item.isExpiring);
+  },
+  
+  getExpiredItems: () => {
+    get().checkExpiryStatus();
+    return get().items.filter(item => item.isExpired);
+  },
+  
+  checkExpiryStatus: () => {
+    const today = new Date();
+    const threeDaysFromNow = addDays(today, 3);
+    
+    set((state) => ({
+      items: state.items.map(item => {
+        const expiryDate = parseISO(item.expiryDate);
+        const isExpired = isBefore(expiryDate, today);
+        const isExpiring = !isExpired && isBefore(expiryDate, threeDaysFromNow);
+        
+        return {
+          ...item,
+          isExpired,
+          isExpiring
+        };
+      })
+    }));
+  },
+}));

@@ -1,0 +1,392 @@
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { ChefHat, Heart, Utensils, Clock, Users, ArrowRight } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import { useAuthStore } from '../store/authStore';
+
+interface PersonalizationForm {
+  dietaryPreferences: string[];
+  allergies: string[];
+  cookingSkill: string;
+  familySize: number;
+  cookingTime: string;
+  cuisinePreferences: string[];
+  healthGoals: string[];
+}
+
+const PersonalizationPage = () => {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [formData, setFormData] = useState<Partial<PersonalizationForm>>({});
+  const navigate = useNavigate();
+  const { updateUserProfile } = useAuthStore();
+  
+  const { register, handleSubmit, watch, setValue } = useForm<PersonalizationForm>();
+
+  const steps = [
+    {
+      title: 'Dietary Preferences',
+      icon: Heart,
+      component: DietaryPreferencesStep
+    },
+    {
+      title: 'Allergies & Restrictions',
+      icon: Utensils,
+      component: AllergiesStep
+    },
+    {
+      title: 'Cooking Experience',
+      icon: ChefHat,
+      component: CookingExperienceStep
+    },
+    {
+      title: 'Family & Time',
+      icon: Users,
+      component: FamilyTimeStep
+    },
+    {
+      title: 'Cuisine & Goals',
+      icon: Clock,
+      component: CuisineGoalsStep
+    }
+  ];
+
+  const handleNext = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      handleComplete();
+    }
+  };
+
+  const handleComplete = () => {
+    updateUserProfile({ isPersonalized: true });
+    toast.success('Personalization complete! Welcome to Zesto AI!');
+    navigate('/dashboard');
+  };
+
+  const StepComponent = steps[currentStep].component;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-2xl"
+      >
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          {/* Progress Bar */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-2xl font-bold text-gray-900">Personalize Your Experience</h1>
+              <span className="text-sm text-gray-500">
+                {currentStep + 1} of {steps.length}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-orange-500 to-red-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Step Icons */}
+          <div className="flex justify-center space-x-4 mb-8">
+            {steps.map((step, index) => {
+              const Icon = step.icon;
+              return (
+                <div
+                  key={index}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                    index <= currentStep
+                      ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white'
+                      : 'bg-gray-200 text-gray-400'
+                  }`}
+                >
+                  <Icon className="w-6 h-6" />
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Step Content */}
+          <div className="mb-8">
+            <StepComponent
+              formData={formData}
+              setFormData={setFormData}
+              register={register}
+              watch={watch}
+              setValue={setValue}
+            />
+          </div>
+
+          {/* Navigation */}
+          <div className="flex justify-between">
+            <button
+              onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+              disabled={currentStep === 0}
+              className="px-6 py-3 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              onClick={handleNext}
+              className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:shadow-lg transition-all duration-200 flex items-center space-x-2"
+            >
+              <span>{currentStep === steps.length - 1 ? 'Complete' : 'Next'}</span>
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+// Step Components
+function DietaryPreferencesStep({ formData, setFormData }: any) {
+  const preferences = ['Vegetarian', 'Vegan', 'Pescatarian', 'Keto', 'Paleo', 'Mediterranean', 'Low Carb', 'High Protein'];
+  const [selected, setSelected] = useState<string[]>(formData.dietaryPreferences || []);
+
+  const togglePreference = (pref: string) => {
+    const newSelected = selected.includes(pref)
+      ? selected.filter(p => p !== pref)
+      : [...selected, pref];
+    setSelected(newSelected);
+    setFormData({ ...formData, dietaryPreferences: newSelected });
+  };
+
+  return (
+    <div>
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">What are your dietary preferences?</h2>
+      <p className="text-gray-600 mb-6">Select all that apply to you</p>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {preferences.map((pref) => (
+          <button
+            key={pref}
+            onClick={() => togglePreference(pref)}
+            className={`p-3 rounded-lg border transition-all duration-200 ${
+              selected.includes(pref)
+                ? 'border-orange-500 bg-orange-50 text-orange-700'
+                : 'border-gray-300 hover:border-orange-300'
+            }`}
+          >
+            {pref}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AllergiesStep({ formData, setFormData }: any) {
+  const allergies = ['Nuts', 'Dairy', 'Eggs', 'Gluten', 'Soy', 'Shellfish', 'Fish', 'Sesame'];
+  const [selected, setSelected] = useState<string[]>(formData.allergies || []);
+
+  const toggleAllergy = (allergy: string) => {
+    const newSelected = selected.includes(allergy)
+      ? selected.filter(a => a !== allergy)
+      : [...selected, allergy];
+    setSelected(newSelected);
+    setFormData({ ...formData, allergies: newSelected });
+  };
+
+  return (
+    <div>
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">Do you have any allergies or restrictions?</h2>
+      <p className="text-gray-600 mb-6">This helps us suggest safe recipes for you</p>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {allergies.map((allergy) => (
+          <button
+            key={allergy}
+            onClick={() => toggleAllergy(allergy)}
+            className={`p-3 rounded-lg border transition-all duration-200 ${
+              selected.includes(allergy)
+                ? 'border-red-500 bg-red-50 text-red-700'
+                : 'border-gray-300 hover:border-red-300'
+            }`}
+          >
+            {allergy}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CookingExperienceStep({ formData, setFormData }: any) {
+  const skills = [
+    { level: 'Beginner', description: 'I\'m just starting out' },
+    { level: 'Intermediate', description: 'I can follow recipes confidently' },
+    { level: 'Advanced', description: 'I love experimenting with techniques' },
+    { level: 'Expert', description: 'I can cook anything!' }
+  ];
+  const [selected, setSelected] = useState(formData.cookingSkill || '');
+
+  const selectSkill = (skill: string) => {
+    setSelected(skill);
+    setFormData({ ...formData, cookingSkill: skill });
+  };
+
+  return (
+    <div>
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">What's your cooking experience?</h2>
+      <p className="text-gray-600 mb-6">This helps us suggest appropriate recipes</p>
+      <div className="space-y-3">
+        {skills.map((skill) => (
+          <button
+            key={skill.level}
+            onClick={() => selectSkill(skill.level)}
+            className={`w-full p-4 rounded-lg border text-left transition-all duration-200 ${
+              selected === skill.level
+                ? 'border-orange-500 bg-orange-50'
+                : 'border-gray-300 hover:border-orange-300'
+            }`}
+          >
+            <div className="font-medium text-gray-900">{skill.level}</div>
+            <div className="text-sm text-gray-600">{skill.description}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FamilyTimeStep({ formData, setFormData }: any) {
+  const [familySize, setFamilySize] = useState(formData.familySize || 2);
+  const [cookingTime, setCookingTime] = useState(formData.cookingTime || '');
+
+  const timeOptions = [
+    'Less than 15 minutes',
+    '15-30 minutes',
+    '30-60 minutes',
+    'More than 1 hour',
+    'I don\'t mind'
+  ];
+
+  const updateFamilySize = (size: number) => {
+    setFamilySize(size);
+    setFormData({ ...formData, familySize: size });
+  };
+
+  const updateCookingTime = (time: string) => {
+    setCookingTime(time);
+    setFormData({ ...formData, cookingTime: time });
+  };
+
+  return (
+    <div>
+      <h2 className="text-xl font-semibold text-gray-900 mb-6">Tell us about your household</h2>
+      
+      <div className="mb-8">
+        <h3 className="font-medium text-gray-900 mb-4">How many people do you usually cook for?</h3>
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => updateFamilySize(Math.max(1, familySize - 1))}
+            className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300"
+          >
+            -
+          </button>
+          <span className="text-2xl font-semibold text-gray-900 w-8 text-center">{familySize}</span>
+          <button
+            onClick={() => updateFamilySize(familySize + 1)}
+            className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300"
+          >
+            +
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="font-medium text-gray-900 mb-4">How much time do you usually have for cooking?</h3>
+        <div className="space-y-2">
+          {timeOptions.map((time) => (
+            <button
+              key={time}
+              onClick={() => updateCookingTime(time)}
+              className={`w-full p-3 rounded-lg border text-left transition-all duration-200 ${
+                cookingTime === time
+                  ? 'border-orange-500 bg-orange-50'
+                  : 'border-gray-300 hover:border-orange-300'
+              }`}
+            >
+              {time}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CuisineGoalsStep({ formData, setFormData }: any) {
+  const cuisines = ['Italian', 'Asian', 'Mexican', 'Indian', 'Mediterranean', 'American', 'French', 'Thai'];
+  const goals = ['Weight Loss', 'Muscle Gain', 'Heart Health', 'General Wellness', 'Energy Boost', 'Better Sleep'];
+  
+  const [selectedCuisines, setSelectedCuisines] = useState<string[]>(formData.cuisinePreferences || []);
+  const [selectedGoals, setSelectedGoals] = useState<string[]>(formData.healthGoals || []);
+
+  const toggleCuisine = (cuisine: string) => {
+    const newSelected = selectedCuisines.includes(cuisine)
+      ? selectedCuisines.filter(c => c !== cuisine)
+      : [...selectedCuisines, cuisine];
+    setSelectedCuisines(newSelected);
+    setFormData({ ...formData, cuisinePreferences: newSelected });
+  };
+
+  const toggleGoal = (goal: string) => {
+    const newSelected = selectedGoals.includes(goal)
+      ? selectedGoals.filter(g => g !== goal)
+      : [...selectedGoals, goal];
+    setSelectedGoals(newSelected);
+    setFormData({ ...formData, healthGoals: newSelected });
+  };
+
+  return (
+    <div>
+      <h2 className="text-xl font-semibold text-gray-900 mb-6">Almost done! Tell us your preferences</h2>
+      
+      <div className="mb-8">
+        <h3 className="font-medium text-gray-900 mb-4">What cuisines do you enjoy?</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {cuisines.map((cuisine) => (
+            <button
+              key={cuisine}
+              onClick={() => toggleCuisine(cuisine)}
+              className={`p-3 rounded-lg border transition-all duration-200 ${
+                selectedCuisines.includes(cuisine)
+                  ? 'border-orange-500 bg-orange-50 text-orange-700'
+                  : 'border-gray-300 hover:border-orange-300'
+              }`}
+            >
+              {cuisine}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="font-medium text-gray-900 mb-4">What are your health goals?</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {goals.map((goal) => (
+            <button
+              key={goal}
+              onClick={() => toggleGoal(goal)}
+              className={`p-3 rounded-lg border transition-all duration-200 ${
+                selectedGoals.includes(goal)
+                  ? 'border-green-500 bg-green-50 text-green-700'
+                  : 'border-gray-300 hover:border-green-300'
+              }`}
+            >
+              {goal}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default PersonalizationPage;

@@ -1,0 +1,47 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import Sidebar from './Sidebar';
+import Header from './Header';
+import MobileNavigation from './MobileNavigation';
+
+interface LayoutProps {
+  children: React.ReactNode;
+}
+
+const Layout: React.FC<LayoutProps> = ({ children }) => {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
+      {/* Desktop Layout */}
+      <div className="hidden lg:flex">
+        <Sidebar />
+        <div className="flex-1 ml-64">
+          <Header />
+          <motion.main
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="p-6 pt-24"
+          >
+            {children}
+          </motion.main>
+        </div>
+      </div>
+
+      {/* Mobile Layout */}
+      <div className="lg:hidden">
+        <Header />
+        <motion.main
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="p-4 pt-20 pb-20"
+        >
+          {children}
+        </motion.main>
+        <MobileNavigation />
+      </div>
+    </div>
+  );
+};
+
+export default Layout;

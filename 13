@@ -1,0 +1,158 @@
+import { create } from 'zustand';
+
+export interface Recipe {
+  id: string;
+  title: string;
+  description: string;
+  ingredients: {
+    name: string;
+    quantity: number;
+    unit: string;
+  }[];
+  instructions: string[];
+  cookingTime: number;
+  servings: number;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  category: string;
+  image?: string;
+  nutrition: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
+  createdBy: string;
+  createdAt: string;
+  tags: string[];
+  rating: number;
+  isAIGenerated: boolean;
+}
+
+interface RecipeState {
+  recipes: Recipe[];
+  userRecipes: Recipe[];
+  favorites: string[];
+  addRecipe: (recipe: Omit<Recipe, 'id' | 'createdAt'>) => void;
+  removeRecipe: (id: string) => void;
+  toggleFavorite: (id: string) => void;
+  generateRecipe: (ingredients: string[], preferences: any) => Promise<Recipe>;
+  surpriseMe: () => Promise<Recipe>;
+}
+
+export const useRecipeStore = create<RecipeState>((set, get) => ({
+  recipes: [],
+  userRecipes: [],
+  favorites: [],
+  
+  addRecipe: (recipe) => {
+    const newRecipe: Recipe = {
+      ...recipe,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+    };
+    
+    set((state) => ({
+      recipes: [...state.recipes, newRecipe],
+      userRecipes: [...state.userRecipes, newRecipe]
+    }));
+  },
+  
+  removeRecipe: (id) => {
+    set((state) => ({
+      recipes: state.recipes.filter(recipe => recipe.id !== id),
+      userRecipes: state.userRecipes.filter(recipe => recipe.id !== id),
+    }));
+  },
+  
+  toggleFavorite: (id) => {
+    set((state) => ({
+      favorites: state.favorites.includes(id)
+        ? state.favorites.filter(fav => fav !== id)
+        : [...state.favorites, id]
+    }));
+  },
+  
+  generateRecipe: async (ingredients, preferences) => {
+    // Simulate AI recipe generation
+    const mockRecipe: Recipe = {
+      id: Date.now().toString(),
+      title: `Delicious ${ingredients[0]} Recipe`,
+      description: `A wonderful recipe using ${ingredients.join(', ')}`,
+      ingredients: ingredients.map(ing => ({
+        name: ing,
+        quantity: 1,
+        unit: 'cup'
+      })),
+      instructions: [
+        'Prepare all ingredients',
+        'Heat pan over medium heat',
+        'Cook ingredients until tender',
+        'Season to taste',
+        'Serve hot'
+      ],
+      cookingTime: 30,
+      servings: 4,
+      difficulty: 'Medium',
+      category: 'Main Course',
+      nutrition: {
+        calories: 250,
+        protein: 15,
+        carbs: 30,
+        fat: 8
+      },
+      createdBy: 'AI Chef',
+      createdAt: new Date().toISOString(),
+      tags: ['quick', 'healthy'],
+      rating: 4.5,
+      isAIGenerated: true
+    };
+    
+    return mockRecipe;
+  },
+  
+  surpriseMe: async () => {
+    const surpriseRecipes = [
+      'Fusion Quinoa Bowl',
+      'Mediterranean Wrap',
+      'Asian Stir-fry',
+      'Italian Pasta',
+      'Mexican Tacos'
+    ];
+    
+    const randomTitle = surpriseRecipes[Math.floor(Math.random() * surpriseRecipes.length)];
+    
+    const mockRecipe: Recipe = {
+      id: Date.now().toString(),
+      title: randomTitle,
+      description: 'A creative surprise recipe just for you!',
+      ingredients: [
+        { name: 'Mixed vegetables', quantity: 2, unit: 'cups' },
+        { name: 'Protein of choice', quantity: 200, unit: 'g' },
+        { name: 'Spices', quantity: 1, unit: 'tsp' }
+      ],
+      instructions: [
+        'Get creative with your ingredients',
+        'Cook with love and passion',
+        'Experiment with flavors',
+        'Enjoy your unique creation'
+      ],
+      cookingTime: 25,
+      servings: 2,
+      difficulty: 'Medium',
+      category: 'Creative',
+      nutrition: {
+        calories: 300,
+        protein: 20,
+        carbs: 25,
+        fat: 12
+      },
+      createdBy: 'AI Chef',
+      createdAt: new Date().toISOString(),
+      tags: ['creative', 'surprise'],
+      rating: 4.8,
+      isAIGenerated: true
+    };
+    
+    return mockRecipe;
+  },
+}));

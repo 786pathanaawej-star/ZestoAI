@@ -1,0 +1,111 @@
+import axios from 'axios';
+import { Recipe } from '../store/recipeStore';
+import { PantryItem } from '../store/pantryStore';
+
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`;
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+
+const parseAIResponse = (response: string): Partial<Recipe> => {
+  try {
+    const cleanedResponse = response.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(cleanedResponse);
+    return {
+      ...parsed,
+      isAIGenerated: true,
+      createdBy: 'AI Chef',
+    };
+  } catch (error) {
+    console.error('Failed to parse AI response:', error);
+    // Fallback to returning the raw text in the description
+    return {
+      title: 'AI Generated Recipe',
+      description: response,
+      ingredients: [],
+      instructions: [],
+      isAIGenerated: true,
+      createdBy: 'AI Chef',
+    };
+  }
+};
+
+const generatePrompt = (pantryItems: PantryItem[], preferences: any, type: 'regular' | 'surprise') => {
+  const itemsList = pantryItems.map(item => `${item.name} (${item.quantity} ${item.unit})`).join(', ');
+  
+  let prompt = `You are Zesto AI, a world-class chef. Your task is to generate a recipe.
+  
+  Available pantry items: ${itemsList}.
+  User preferences: ${JSON.stringify(preferences)}.
+  
+  Please use ONLY the items from the pantry.
+  `;
+  
+  if (type === 'surprise') {
+    prompt += `This is a "Surprise Me" request. Be creative and invent a unique, delicious recipe. Give it a fun, inventive name.\n`;
+  } else {
+    prompt += `Generate a practical and delicious recipe based on the available items.\n`;
+  }
+
+  prompt += `
+  The output MUST be a single JSON object that strictly follows this format, with no extra text or explanations before or after the JSON block:
+  {
+    "title": "Recipe Title",
+    "description": "A brief, enticing description of the dish.",
+    "ingredients": [{ "name": "Ingredient Name", "quantity": 1, "unit": "cup" }],
+    "instructions": ["Step 1...", "Step 2..."],
+    "cookingTime": 30, // in minutes
+    "servings": 2,
+    "difficulty": "Easy" | "Medium" | "Hard",
+    "category": "e.g., Main Course, Appetizer",
+    "nutrition": { "calories": 250, "protein": 15, "carbs": 30, "fat": 8 },
+    "tags": ["e.g., quick", "healthy", "vegan"]
+  }
+  `;
+
+  return prompt;
+};
+
+export const generateRecipeFromAI = async (
+  pantryItems: PantryItem[],
+  preferences: any,
+  subscription: 'free' | 'premium',
+  type: 'regular' | 'surprise'
+): Promise<Partial<Recipe>> => {
+  const prompt = generatePrompt(pantryItems, preferences, type);
+
+  if (subscription === 'premium') {
+    // Use Gemini 1.5 Flash for premium users
+    try {
+      const response = await axios.post(GEMINI_API_URL, {
+        contents: [{ parts: [{ text: prompt }] }],
+      });
+      const aiResponse = response.data.candidates[0].content.parts[0].text;
+      return parseAIResponse(aiResponse);
+    } catch (error) {
+      console.error('Gemini API Error:', error);
+      throw new Error('Failed to generate recipe with Gemini AI.');
+    }
+  } else {
+    // Use Llama via Groq for free users
+    try {
+      const response = await axios.post(
+        GROQ_API_URL,
+        {
+          model: 'llama3-8b-8192', // Or another suitable Llama model
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      const aiResponse = response.data.choices[0].message.content;
+      return parseAIResponse(aiResponse);
+    } catch (error) {
+      console.error('Groq API Error:', error);
+      throw new Error('Failed to generate recipe with Llama AI.');
+    }
+  }
+};

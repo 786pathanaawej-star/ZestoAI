@@ -1,0 +1,245 @@
+import React, { useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import {
+  Package,
+  ChefHat,
+  Calendar,
+  AlertTriangle,
+  Clock,
+  TrendingUp,
+  BookOpen,
+  Users,
+  Crown
+} from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
+import { usePantryStore } from '../store/pantryStore';
+
+const DashboardPage = () => {
+  const { user } = useAuthStore();
+  const { items, getExpiringItems, getExpiredItems, checkExpiryStatus } = usePantryStore();
+
+  useEffect(() => {
+    checkExpiryStatus();
+  }, [checkExpiryStatus]);
+
+  const expiringItems = getExpiringItems();
+  const expiredItems = getExpiredItems();
+  const totalItems = items.length;
+
+  const stats = [
+    {
+      title: 'Pantry Items',
+      value: totalItems,
+      icon: Package,
+      color: 'from-blue-500 to-blue-600',
+      link: '/pantry'
+    },
+    {
+      title: 'Expiring Soon',
+      value: expiringItems.length,
+      icon: Clock,
+      color: 'from-yellow-500 to-yellow-600',
+      link: '/pantry'
+    },
+    {
+      title: 'Expired Items',
+      value: expiredItems.length,
+      icon: AlertTriangle,
+      color: 'from-red-500 to-red-600',
+      link: '/pantry'
+    },
+    {
+      title: 'Recipes Made',
+      value: 12,
+      icon: ChefHat,
+      color: 'from-green-500 to-green-600',
+      link: '/recipes'
+    }
+  ];
+
+  const quickActions = [
+    {
+      title: 'Generate Recipe',
+      description: 'Create recipes with your pantry items',
+      icon: ChefHat,
+      color: 'from-orange-500 to-red-500',
+      link: '/chef',
+      premium: user?.subscription === 'free'
+    },
+    {
+      title: 'Add to Pantry',
+      description: 'Scan or manually add new items',
+      icon: Package,
+      color: 'from-blue-500 to-purple-500',
+      link: '/pantry'
+    },
+    {
+      title: 'View Meal Plan',
+      description: 'Check today\'s suggested meals',
+      icon: Calendar,
+      color: 'from-green-500 to-teal-500',
+      link: '/meal-plan'
+    },
+    {
+      title: 'Explore Recipes',
+      description: 'Browse community recipes',
+      icon: BookOpen,
+      color: 'from-pink-500 to-rose-500',
+      link: '/recipes'
+    }
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Welcome back, {user?.displayName}!
+          </h1>
+          <p className="text-gray-600 mt-2">
+            Let's make something delicious today
+          </p>
+        </div>
+        {user?.subscription === 'free' && (
+          <Link
+            to="/subscription"
+            className="mt-4 sm:mt-0 inline-flex items-center space-x-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-200"
+          >
+            <Crown className="w-5 h-5" />
+            <span>Upgrade to Premium</span>
+          </Link>
+        )}
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, index) => (
+          <motion.div
+            key={stat.title}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1 }}
+          >
+            <Link
+              to={stat.link}
+              className="block bg-white rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all duration-200"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">{stat.value}</p>
+                </div>
+                <div className={`w-12 h-12 bg-gradient-to-r ${stat.color} rounded-xl flex items-center justify-center`}>
+                  <stat.icon className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </Link>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Alerts */}
+      {(expiringItems.length > 0 || expiredItems.length > 0) && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl p-6 shadow-sm"
+        >
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Pantry Alerts</h2>
+          <div className="space-y-3">
+            {expiredItems.length > 0 && (
+              <div className="flex items-center space-x-3 p-3 bg-red-50 rounded-lg">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+                <span className="text-red-700">
+                  {expiredItems.length} item(s) have expired and should be removed
+                </span>
+              </div>
+            )}
+            {expiringItems.length > 0 && (
+              <div className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg">
+                <Clock className="w-5 h-5 text-yellow-500" />
+                <span className="text-yellow-700">
+                  {expiringItems.length} item(s) will expire within 3 days
+                </span>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Quick Actions */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-2xl p-6 shadow-sm"
+      >
+        <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {quickActions.map((action, index) => (
+            <Link
+              key={action.title}
+              to={action.link}
+              className={`group relative p-6 rounded-xl bg-gradient-to-r ${action.color} text-white hover:shadow-lg transition-all duration-200 ${
+                action.premium ? 'opacity-75' : ''
+              }`}
+              onClick={(e) => {
+                if (action.premium) {
+                  e.preventDefault();
+                }
+              }}
+            >
+              {action.premium && (
+                <Crown className="absolute top-3 right-3 w-5 h-5 text-yellow-200" />
+              )}
+              <action.icon className="w-8 h-8 mb-3" />
+              <h3 className="font-semibold mb-2">{action.title}</h3>
+              <p className="text-sm opacity-90">{action.description}</p>
+            </Link>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Recent Activity */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-2xl p-6 shadow-sm"
+      >
+        <h2 className="text-xl font-semibold text-gray-900 mb-6">Recent Activity</h2>
+        <div className="space-y-4">
+          <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+            <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+              <ChefHat className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-gray-900">Generated Pasta Recipe</p>
+              <p className="text-sm text-gray-600">2 hours ago</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+              <Package className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-gray-900">Added Tomatoes to Pantry</p>
+              <p className="text-sm text-gray-600">5 hours ago</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+            <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
+              <Calendar className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-gray-900">Generated Meal Plan</p>
+              <p className="text-sm text-gray-600">1 day ago</p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+export default DashboardPage;

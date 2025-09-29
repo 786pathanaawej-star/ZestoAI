@@ -1,0 +1,73 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import { PantryItem, usePantryStore } from '../../store/pantryStore';
+import { Calendar, Trash2, Edit, Package } from 'lucide-react';
+import { format, parseISO, differenceInDays } from 'date-fns';
+
+interface PantryItemCardProps {
+  item: PantryItem;
+}
+
+const PantryItemCard: React.FC<PantryItemCardProps> = ({ item }) => {
+  const { removeItem } = usePantryStore();
+
+  const getExpiryStatus = () => {
+    const expiryDate = parseISO(item.expiryDate);
+    const today = new Date();
+    const daysDiff = differenceInDays(expiryDate, today);
+
+    if (item.isExpired) {
+      return { text: 'Expired', color: 'text-red-500', bg: 'bg-red-100', dot: 'bg-red-500' };
+    }
+    if (item.isExpiring) {
+      return { text: `Expires in ${daysDiff} day(s)`, color: 'text-yellow-600', bg: 'bg-yellow-100', dot: 'bg-yellow-500' };
+    }
+    return { text: `Expires in ${daysDiff} day(s)`, color: 'text-green-600', bg: 'bg-green-100', dot: 'bg-green-500' };
+  };
+
+  const status = getExpiryStatus();
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-shadow duration-200 overflow-hidden"
+    >
+      <div className="h-32 bg-gray-100 flex items-center justify-center">
+        {item.image ? (
+          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+        ) : (
+          <Package className="w-12 h-12 text-gray-300" />
+        )}
+      </div>
+      <div className="p-4">
+        <h3 className="text-lg font-semibold text-gray-900 truncate">{item.name}</h3>
+        <p className="text-sm text-gray-500">{item.category}</p>
+        <p className="text-lg font-medium text-gray-800 my-2">
+          {item.quantity} <span className="text-sm text-gray-600">{item.unit}</span>
+        </p>
+        
+        <div className={`inline-flex items-center space-x-2 px-2 py-1 rounded-full text-xs font-medium ${status.bg} ${status.color}`}>
+          <span className={`w-2 h-2 rounded-full ${status.dot}`}></span>
+          <span>{status.text}</span>
+        </div>
+      </div>
+      <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end space-x-2">
+        <button className="p-2 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors">
+          <Edit className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => removeItem(item.id)}
+          className="p-2 rounded-full text-red-500 hover:bg-red-100 transition-colors"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    </motion.div>
+  );
+};
+
+export default PantryItemCard;

@@ -1,0 +1,101 @@
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import {
+  LayoutDashboard,
+  Package,
+  ChefHat,
+  Calendar,
+  BookOpen,
+  Users,
+  User,
+  Settings,
+  Crown,
+  LogOut
+} from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
+
+const Sidebar = () => {
+  const { user, logout } = useAuthStore();
+
+  const navigationItems = [
+    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/pantry', icon: Package, label: 'Pantry' },
+    { to: '/chef', icon: ChefHat, label: 'Chef AI', premium: true },
+    { to: '/meal-plan', icon: Calendar, label: 'Meal Plan' },
+    { to: '/recipes', icon: BookOpen, label: 'Recipes' },
+    { to: '/family', icon: Users, label: 'Family' },
+    { to: '/profile', icon: User, label: 'Profile' },
+    { to: '/settings', icon: Settings, label: 'Settings' },
+  ];
+
+  return (
+    <motion.div
+      initial={{ x: -100, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      className="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 shadow-lg z-30"
+    >
+      <div className="p-6">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
+            <ChefHat className="w-6 h-6 text-white" />
+          </div>
+          <h1 className="text-xl font-bold text-gray-900">Zesto AI</h1>
+        </div>
+      </div>
+
+      <nav className="px-4 space-y-2">
+        {navigationItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              `flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                isActive
+                  ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
+                  : 'text-gray-600 hover:bg-gray-100'
+              } ${
+                item.premium && user?.subscription === 'free'
+                  ? 'opacity-50 cursor-not-allowed'
+                  : ''
+              }`
+            }
+            onClick={(e) => {
+              if (item.premium && user?.subscription === 'free') {
+                e.preventDefault();
+              }
+            }}
+          >
+            <item.icon className="w-5 h-5" />
+            <span className="font-medium">{item.label}</span>
+            {item.premium && user?.subscription === 'free' && (
+              <Crown className="w-4 h-4 text-yellow-500" />
+            )}
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="absolute bottom-0 left-0 right-0 p-4">
+        {user?.subscription === 'free' && (
+          <NavLink
+            to="/subscription"
+            className="flex items-center justify-center space-x-2 px-4 py-3 mb-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-xl hover:shadow-lg transition-all duration-200"
+          >
+            <Crown className="w-5 h-5" />
+            <span className="font-medium">Upgrade to Premium</span>
+          </NavLink>
+        )}
+        
+        <button
+          onClick={logout}
+          className="flex items-center space-x-3 px-4 py-3 w-full text-gray-600 hover:bg-gray-100 rounded-xl transition-all duration-200"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="font-medium">Logout</span>
+        </button>
+      </div>
+    </motion.div>
+  );
+};
+
+export default Sidebar;

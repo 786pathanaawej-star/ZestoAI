@@ -1,0 +1,133 @@
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useForm, Controller } from 'react-hook-form';
+import { X, Save } from 'lucide-react';
+import { usePantryStore } from '../../store/pantryStore';
+import toast from 'react-hot-toast';
+
+interface AddItemForm {
+  name: string;
+  category: string;
+  quantity: number;
+  unit: string;
+  expiryDate: string;
+}
+
+interface AddItemModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose }) => {
+  const { addItem, categories } = usePantryStore();
+  const { register, handleSubmit, control, reset, formState: { errors } } = useForm<AddItemForm>();
+
+  const onSubmit = (data: AddItemForm) => {
+    addItem({ ...data, quantity: Number(data.quantity) });
+    toast.success(`${data.name} added to pantry!`);
+    reset();
+    onClose();
+  };
+
+  const units = ['pcs', 'g', 'kg', 'ml', 'liter', 'tsp', 'tbsp', 'cup', 'oz'];
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white rounded-2xl shadow-xl w-full max-w-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">Add New Pantry Item</h2>
+                <button type="button" onClick={onClose} className="p-2 rounded-full hover:bg-gray-100">
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
+                  <input
+                    {...register('name', { required: 'Item name is required' })}
+                    placeholder="e.g., Fresh Tomatoes"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                  {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <select
+                      {...register('category', { required: 'Category is required' })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select>
+                    {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category.message}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                    <input
+                      type="date"
+                      {...register('expiryDate', { required: 'Expiry date is required' })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                    {errors.expiryDate && <p className="mt-1 text-sm text-red-600">{errors.expiryDate.message}</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                    <input
+                      type="number"
+                      {...register('quantity', { required: 'Quantity is required', valueAsNumber: true, min: { value: 0.1, message: "Quantity must be positive" } })}
+                      placeholder="e.g., 5"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                    {errors.quantity && <p className="mt-1 text-sm text-red-600">{errors.quantity.message}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                    <select
+                      {...register('unit', { required: 'Unit is required' })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      {units.map(unit => <option key={unit} value={unit}>{unit}</option>)}
+                    </select>
+                    {errors.unit && <p className="mt-1 text-sm text-red-600">{errors.unit.message}</p>}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 bg-gray-50 rounded-b-2xl flex justify-end">
+                <button
+                  type="submit"
+                  className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-2 rounded-lg hover:shadow-lg transition-all duration-200 flex items-center space-x-2"
+                >
+                  <Save className="w-5 h-5" />
+                  <span>Save Item</span>
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+export default AddItemModal;

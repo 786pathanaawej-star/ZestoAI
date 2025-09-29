@@ -1,0 +1,66 @@
+import { create } from 'zustand';
+import { User } from 'firebase/auth';
+
+interface UserData {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  isPersonalized: boolean;
+  subscription: 'free' | 'premium';
+  subscriptionExpiry?: Date;
+}
+
+interface AuthState {
+  user: UserData | null;
+  isLoading: boolean;
+  isPersonalized: boolean;
+  initialize: () => void;
+  setUser: (user: UserData | null) => void;
+  setLoading: (loading: boolean) => void;
+  logout: () => void;
+  updateUserProfile: (data: Partial<UserData>) => void;
+}
+
+export const useAuthStore = create<AuthState>((set, get) => ({
+  user: null,
+  isLoading: true,
+  isPersonalized: false,
+  
+  initialize: () => {
+    // Simulate Firebase auth state listener
+    setTimeout(() => {
+      const savedUser = localStorage.getItem('zesto_user');
+      if (savedUser) {
+        set({ user: JSON.parse(savedUser), isLoading: false });
+      } else {
+        set({ isLoading: false });
+      }
+    }, 1000);
+  },
+  
+  setUser: (user) => {
+    set({ user });
+    if (user) {
+      localStorage.setItem('zesto_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('zesto_user');
+    }
+  },
+  
+  setLoading: (isLoading) => set({ isLoading }),
+  
+  logout: () => {
+    set({ user: null });
+    localStorage.removeItem('zesto_user');
+  },
+  
+  updateUserProfile: (data) => {
+    const currentUser = get().user;
+    if (currentUser) {
+      const updatedUser = { ...currentUser, ...data };
+      set({ user: updatedUser });
+      localStorage.setItem('zesto_user', JSON.stringify(updatedUser));
+    }
+  },
+}));

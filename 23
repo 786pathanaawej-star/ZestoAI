@@ -1,0 +1,44 @@
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  Package,
+  ChefHat,
+  Calendar,
+  BookOpen,
+  Users
+} from 'lucide-react';
+
+const MobileNavigation = () => {
+  const navigationItems = [
+    { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
+    { to: '/pantry', icon: Package, label: 'Pantry' },
+    { to: '/chef', icon: ChefHat, label: 'Chef' },
+    { to: '/meal-plan', icon: Calendar, label: 'Meals' },
+    { to: '/recipes', icon: BookOpen, label: 'Recipes' },
+    { to: '/family', icon: Users, label: 'Family' },
+  ];
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30">
+      <div className="flex justify-around py-2">
+        {navigationItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              `flex flex-col items-center p-2 min-w-0 flex-1 ${
+                isActive ? 'text-orange-500' : 'text-gray-600'
+              }`
+            }
+          >
+            <item.icon className="w-5 h-5" />
+            <span className="text-xs mt-1 truncate">{item.label}</span>
+          </NavLink>
+        ))}
+      </div>
+    </nav>
+  );
+};
+
+export default MobileNavigation;
